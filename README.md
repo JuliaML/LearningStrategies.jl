@@ -1,5 +1,7 @@
 # LearningStrategies
 
+[![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl)   [![Gitter chat](https://badges.gitter.im/JuliaML/chat.png)](https://gitter.im/JuliaML/chat)
+
 LearningStrategies is a generic and modular framework for building custom iterative algorithms in Julia.  It is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
 
 ## Basics
