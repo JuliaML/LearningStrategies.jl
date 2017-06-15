@@ -29,7 +29,7 @@ export
 
 # ----------------------------------------------------------------------
 
-abstract LearningStrategy
+abstract type LearningStrategy end
 
 # fallbacks don't do anything
 pre_hook(strat::LearningStrategy, model)      = return

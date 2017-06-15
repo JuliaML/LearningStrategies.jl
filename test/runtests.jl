@@ -1,9 +1,37 @@
+module LearningStrategiesTest
 using LearningStrategies
 using Base.Test
 
-model = nothing
-ii = 0
-strat = make_learner(MaxIter(20), IterFunction((m,i) -> (global ii; ii=i)))
+add_one!(m, i) = (m[1] += 1)
 
-learn!(model, strat)
-@test ii == 20
+@testset "MaxIter/IterFunction" begin
+    model = [0]
+    s = make_learner(MaxIter(20), IterFunction(add_one!))
+    learn!(model, s)
+    @test model[1] == 20
+end
+
+@testset "TimeLimit" begin
+    model = nothing
+    s = make_learner(TimeLimit(2))
+    t1 = time()
+    learn!(model, s)
+    elapsed = time() - t1
+    @test elapsed < 3
+end
+
+@testset "ShowStatus" begin
+    model = nothing
+    s = make_learner(MaxIter(2), ShowStatus(1, (m, i) -> "    model is still $model"))
+    learn!(model, s)
+end
+
+@testset "ConvergenceFunction" begin
+    model = nothing
+    s = make_learner(ConvergenceFunction((m,i) -> true))
+    learn!(model, s)
+end
+
+
+
+end
