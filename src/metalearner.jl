@@ -89,3 +89,9 @@ function make_learner(args...; kw...)
     end
     MetaLearner(args..., strats...)
 end
+
+
+# add to an existing meta
+function make_learner(meta::MetaLearner, args...; kw...)
+    make_learner(meta.managers..., args...; kw...)
+end
