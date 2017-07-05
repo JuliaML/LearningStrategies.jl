@@ -107,7 +107,7 @@ end
     IterFunction(f, b=1)
 Call `f(model, i)` every `b` iterations.
 """
-immutable IterFunction <: LearningStrategy
+struct IterFunction <: LearningStrategy
     f::Function
     every::Int
 end
