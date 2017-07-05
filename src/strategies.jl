@@ -82,7 +82,7 @@ post_hook(strat::Converged, model) = info()
     ConvergedTo(f, goal; tol=1e-6, every=1)
 Stop learning when `‖f(model) - goal‖ ≦ tol`.
 """
-type ConvergedTo{V} <: LearningStrategy
+struct ConvergedTo{V} <: LearningStrategy
     f::Function   # f(model)
     tol::Float64  # normdiff tolerance
     goal::V       # goal value
@@ -122,7 +122,7 @@ end
     Tracer{T}(::Type{T}, f, b=1)
 Store `f(model, i)` every `b` iterations.
 """
-type Tracer{S} <: LearningStrategy
+struct Tracer{S} <: LearningStrategy
     every::Int
     f::Function
     storage::Vector{S}
