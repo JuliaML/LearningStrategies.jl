@@ -40,6 +40,7 @@ ShowStatus(every::Int = 1) = ShowStatus(every, (model, i) -> "Iteration $i: $(pa
 pre_hook(strat::ShowStatus, model) = iter_hook(strat, model, 0)
 function iter_hook(strat::ShowStatus, model, i)
     mod1(i, strat.every) == strat.every && println(strat.f(model, i))
+    return
 end
 
 #-----------------------------------------------------------------------# ConvergenceFunction
@@ -50,14 +51,14 @@ Stop learning when `f(model, i)` returns true.
 struct ConvergenceFunction <: LearningStrategy
     f::Function
 end
-finished(strat::ConvergenceFunction, model, i) = strat.f(model, i)
+finished(strat::ConvergenceFunction, model, i)::Bool = strat.f(model, i)
 
 #-----------------------------------------------------------------------# Converged
 """
     Converged(f; tol = 1e-6, every = 1)
 Stop learning when `norm(f(model) - lastf) ≦ tol`.
 """
-struct Converged <: LearningStrategy
+mutable struct Converged <: LearningStrategy
     f::Function   # f(model)
     tol::Float64  # normdiff tolerance
     every::Int    # only check every ith iteration
@@ -75,7 +76,7 @@ function finished(strat::Converged, model, i)
         false
     end
 end
-post_hook(strat::Converged, model) = info()
+post_hook(strat::Converged, model) = info("Not converged: $(strat.lastval)")
 
 #-----------------------------------------------------------------------# ConvergedTo
 """
@@ -115,6 +116,7 @@ function iter_hook(strat::IterFunction, model, i)
     if mod1(i, strat.every) == strat.every
         strat.f(model, i)
     end
+    return
 end
 
 #-----------------------------------------------------------------------# Tracer

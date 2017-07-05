@@ -50,16 +50,14 @@ end
 
 
 # return nothing forever
-type InfiniteNothing end
+struct InfiniteNothing end
 Base.start(itr::InfiniteNothing) = 1
 Base.done(itr::InfiniteNothing, i) = false
 Base.next(itr::InfiniteNothing, i) = (nothing, i+1)
 
 
 # we can optionally learn without input data... good for minimizing functions
-function learn!(model, meta::MetaLearner)
-    learn!(model, meta, InfiniteNothing())
-end
+learn!(model, meta::MetaLearner) = learn!(model, meta, InfiniteNothing())
 
 # TODO: can we instead use generated functions for each MetaLearner callback so that they are ONLY called for
 #   those methods which the manager explicitly implements??  We'd need to have a type-stable way
