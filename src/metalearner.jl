@@ -4,7 +4,7 @@
 
 A Meta-learner which joins learning strategies in a type-stable way.
 """
-type MetaLearner{MGRS <: Tuple} <: LearningStrategy
+struct MetaLearner{MGRS <: Tuple} <: LearningStrategy
     managers::MGRS
 end
 
@@ -90,9 +90,4 @@ function make_learner(args...; kw...)
         end
     end
     MetaLearner(args..., strats...)
-end
-
-# add to an existing meta
-function make_learner(meta::MetaLearner, args...; kw...)
-    make_learner(meta.managers..., args...; kw...)
 end

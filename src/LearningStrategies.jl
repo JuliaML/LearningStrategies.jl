@@ -8,7 +8,7 @@ using LearnBase
 import LearnBase: learn!, update!
 
 export
-    LearningStrategy, MetaLearner, make_learner,
+    LearningStrategy, MetaLearner, make_learner, LearnType,
     # LearningStrategies
     MaxIter, TimeLimit, ConvergenceFunction, IterFunction, ShowStatus, Tracer,
     Converged, ConvergedTo,
