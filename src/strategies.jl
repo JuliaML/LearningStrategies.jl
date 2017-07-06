@@ -76,7 +76,6 @@ function finished(strat::Converged, model, i)
         false
     end
 end
-post_hook(strat::Converged, model) = info("Not converged: $(strat.lastval)")
 
 #-----------------------------------------------------------------------# ConvergedTo
 """
