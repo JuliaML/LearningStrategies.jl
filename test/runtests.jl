@@ -2,12 +2,41 @@ module LearningStrategiesTest
 using LearningStrategies
 using Base.Test
 
-add_one!(m, i) = (m[1] += 1)
+
+
+
+strat_list = [
+    MaxIter(20),
+    TimeLimit(2),
+    ShowStatus(1, (m, i) -> "$m after $i iterations"),
+    ConvergenceFunction((m, i) -> true),
+    Converged(m -> m),
+    ConvergedTo(m -> m, ones(2)),
+    IterFunction((m, i) -> println("this is iteration $i")),
+    Tracer(Float64, (m, i) -> mean(m))
+]
+@testset "Type stability" begin
+    m = ones(2)
+    i = 5
+    for s in strat_list
+        println("  > ", s)
+        # println("    - ", "pre_hook")
+        @inferred pre_hook(s, m)
+        # println("    - ", "post_hook")
+        @inferred post_hook(s, m)
+        # println("    - ", "iter_hook")
+        @inferred iter_hook(s, m, i)
+        # println("    - ", "finished")
+        @inferred finished(s, m, i)
+        # println("    - ", "update!")
+        @inferred update!(m, s, i)
+    end
+end
 
 @testset "MaxIter/IterFunction" begin
     model = [0]
-    s = make_learner(MaxIter(20), IterFunction(add_one!))
-    learn!(model, s)
+    s = make_learner(MaxIter(20), IterFunction((m,i) -> (m[1] += 1)))
+    @inferred learn!(model, s)
     @test model[1] == 20
 end
 
@@ -15,7 +44,7 @@ end
     model = nothing
     s = make_learner(TimeLimit(2))
     t1 = time()
-    learn!(model, s)
+    @inferred learn!(model, s)
     elapsed = time() - t1
     @test elapsed < 3
 end
@@ -23,13 +52,38 @@ end
 @testset "ShowStatus" begin
     model = nothing
     s = make_learner(MaxIter(2), ShowStatus(1, (m, i) -> "    model is still $model"))
-    learn!(model, s)
+    @inferred learn!(model, s)
 end
 
 @testset "ConvergenceFunction" begin
     model = nothing
     s = make_learner(ConvergenceFunction((m,i) -> true))
-    learn!(model, s)
+    @inferred learn!(model, s)
+end
+
+@testset "Converged" begin
+    model = ones(5)
+    s = make_learner(Converged(m -> m))
+    @inferred learn!(model, s)
+end
+
+@testset "ConvergedTo" begin
+    model = ones(5)
+    s = make_learner(ConvergedTo(m -> m, ones(5)))
+    @inferred learn!(model, s)
+end
+
+@testset "IterFunction" begin
+    model = ones(5)
+    s = make_learner(MaxIter(2), IterFunction((m,i) -> println("    print 2 times!")))
+    @inferred learn!(model, s)
+end
+
+@testset "Tracer" begin
+    model = 1.0
+    s = make_learner(MaxIter(3), Tracer(Float64, (m,i) -> m))
+    @inferred learn!(model, s)
+    @test s.managers[2].storage == ones(3)
 end
 
 

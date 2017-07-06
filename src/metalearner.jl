@@ -1,7 +1,10 @@
+#-----------------------------------------------------------------------# MetaLearner
+"""
+    MetaLearner(strats::LearningStrategy...)
 
-# Meta-learner that can compose sub-managers of optimization components in a type-stable way.
-# A sub-manager is any LearningStrategy, and may implement any subset of callbacks.
-type MetaLearner{MGRS <: Tuple} <: LearningStrategy
+A Meta-learner which joins learning strategies in a type-stable way.
+"""
+struct MetaLearner{MGRS <: Tuple} <: LearningStrategy
     managers::MGRS
 end
 
@@ -9,37 +12,52 @@ function MetaLearner(mgrs::LearningStrategy...)
     MetaLearner(mgrs)
 end
 
-pre_hook(meta::MetaLearner,  model)    = foreach(mgr -> pre_hook(mgr, model),      meta.managers)
-iter_hook(meta::MetaLearner, model, i) = foreach(mgr -> iter_hook(mgr, model, i),  meta.managers)
-finished(meta::MetaLearner,  model, i) = any(mgr     -> finished(mgr, model, i),   meta.managers)
-post_hook(meta::MetaLearner, model)    = foreach(mgr -> post_hook(mgr, model),     meta.managers)
+pre_hook(meta::MetaLearner,  model)     = foreach(mgr -> pre_hook(mgr, model),     meta.managers)
+iter_hook(meta::MetaLearner, model, i)  = foreach(mgr -> iter_hook(mgr, model, i), meta.managers)
+finished(meta::MetaLearner,  model, i)  = any(mgr     -> finished(mgr, model, i),  meta.managers)
+post_hook(meta::MetaLearner, model)     = foreach(mgr -> post_hook(mgr, model),    meta.managers)
+update!(model, meta::MetaLearner, item) = foreach(mgr -> update!(model, mgr, item), meta.managers)
 
-# This is the core iteration loop.  Iterate through data, checking for
-# early stopping after each iteration.
-function learn!(model, meta::MetaLearner, data)
+# How data is sent to the metalearner
+module LearnType
+    struct Offline end
+    struct Online  end
+end
+
+#-----------------------------------------------------------------------# Online
+function learn!(model, meta::MetaLearner, data, ::LearnType.Online = LearnType.Online())
     pre_hook(meta, model)
     for (i, item) in enumerate(data)
-        for mgr in meta.managers
-            learn!(model, mgr, item)
-        end
-
+        update!(model, meta, item)
         iter_hook(meta, model, i)
         finished(meta, model, i) && break
     end
     post_hook(meta, model)
 end
 
+#-----------------------------------------------------------------------# Offline
+function learn!(model, meta::MetaLearner, data, ::LearnType.Offline)
+    pre_hook(meta, model)
+    i = 1
+    while true
+        update!(model, meta, data)
+        iter_hook(meta, model, i)
+        finished(meta, model, i) && break
+        i += 1
+    end
+    post_hook(meta, model)
+end
+
+
 # return nothing forever
-type InfiniteNothing end
+struct InfiniteNothing end
 Base.start(itr::InfiniteNothing) = 1
 Base.done(itr::InfiniteNothing, i) = false
 Base.next(itr::InfiniteNothing, i) = (nothing, i+1)
 
 
 # we can optionally learn without input data... good for minimizing functions
-function learn!(model, meta::MetaLearner)
-    learn!(model, meta, InfiniteNothing())
-end
+learn!(model, meta::MetaLearner) = learn!(model, meta, InfiniteNothing())
 
 # TODO: can we instead use generated functions for each MetaLearner callback so that they are ONLY called for
 #   those methods which the manager explicitly implements??  We'd need to have a type-stable way
@@ -71,6 +89,7 @@ function make_learner(args...; kw...)
     end
     MetaLearner(args..., strats...)
 end
+
 
 # add to an existing meta
 function make_learner(meta::MetaLearner, args...; kw...)

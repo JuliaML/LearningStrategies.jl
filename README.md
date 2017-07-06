@@ -23,10 +23,7 @@ LearningStrategies provides a generic interface, along with common functionality
 function learn!(model, meta::MetaLearner, data)
     pre_hook(meta, model)
     for (i, item) in enumerate(data)
-        for mgr in meta.managers
-            learn!(model, mgr, item)
-        end
-
+        update!(model, meta, item)
         iter_hook(meta, model, i)
         finished(meta, model, i) && break
     end
