@@ -33,6 +33,25 @@ end
 
 Each of these callbacks will trigger the implemented callbacks of the sub-strategies, allowing you to compile complex behavior from simple components.
 
+The above loop sends data to the MetaLearner in an online fashion.  LearningStrategies can also be used for offline algorithms via
+```julia
+learn!(model, meta, data, LearnType.Offline())
+```
+
+```julia
+function learn!(model, meta::MetaLearner, data, ::LearnType.Offline)
+    pre_hook(meta, model)
+    i = 1
+    while true
+        update!(model, meta, data)
+        iter_hook(meta, model, i)
+        finished(meta, model, i) && break
+        i += 1
+    end
+    post_hook(meta, model)
+end
+```
+
 
 ## Simple example
 
