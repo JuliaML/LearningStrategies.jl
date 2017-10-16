@@ -20,17 +20,49 @@ cleanup
 
 
 ## MetaStrategy
+The core function of LearningStrategies is a straightforward implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.
+
+```julia
+function learn!(model, strat::LearningStrategy, data)
+    setup!(strat, model)
+    for (i, item) in enumerate(data)
+        update!(model, strat, item)
+        hook(strat, model, i)
+        finished(strat, model, i) && break
+    end
+    cleanup!(strat, model)
+end
+```
+
+## Example
+
+```julia
+using LearningStrategies
+import LearningStrategies: update!
+
+struct Model
+    params::Vector{Float64}
+end
+function update!(m::Model, s::LearningStrategy, item)
+    rand!(m.params)
+end
+
+m = Model(rand(5))
+learn!(m, MaxIter(5))
+learn!(m, Verbose(MaxIter(5)))
+```
+
 At the core of LearningStrategies is the `MetaStrategy` type, which binds together many functionally independent learning strategies and controls the iterative loop.  The core loop is:
 
 ```julia
-function learn!(model, meta::MetaLearner, data)
-    pre_hook(meta, model)
+function learn!(model, meta::Strategy, data)
+    setup!(meta, model)
     for (i, item) in enumerate(data)
         update!(model, meta, item)
-        iter_hook(meta, model, i)
+        hook(meta, model, i)
         finished(meta, model, i) && break
     end
-    post_hook(meta, model)
+    cleanup!(meta, model)
 end
 ```
 
