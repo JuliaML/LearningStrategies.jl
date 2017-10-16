@@ -46,9 +46,6 @@ julia> using LearningStrategies
 julia> s = Verbose(TimeLimit(2))
 Verbose TimeLimit(2.0)
 
-julia> learn!(nothing, s)
-INFO: TimeLimit(2.0) finished
-
 julia> @elapsed learn!(nothing, s)
 INFO: TimeLimit(2.0) finished
 2.000225545
@@ -67,45 +64,6 @@ MetaStrategy
 julia> learn!(nothing, s, 1:100)
 INFO: MaxIter(5) finished
 ```
-
-
-## Simple example
-
-```julia
-julia> using LearningStrategies
-
-julia> model = nothing
-
-julia> strat = make_learner(TimeLimit(2))
-LearningStrategies.MetaLearner{Tuple{LearningStrategies.TimeLimit}}((LearningStrategies.TimeLimit(2.0,0.0),))
-
-julia> @time learn!(model, strat)
-INFO: Time's up!
-  2.068520 seconds (39.50 k allocations: 1.735 MB)
-```
-
-Following through this very short example, we see that we have built a MetaLearner that contains a single sub-strategy: a 2-second time limit.  The TimeLimit strategy has a simple implementation:
-
-```julia
-"Stop iterating after a pre-determined amount of time."
-type TimeLimit <: LearningStrategy
-    secs::Float64
-    secs_end::Float64
-    TimeLimit(secs::Number) = new(secs)
-end
-pre_hook(strat::TimeLimit, model) = (strat.secs_end = time() + strat.secs)
-function finished(strat::TimeLimit, model, i)
-    stop = time() >= strat.secs_end
-    if stop
-        info("Time's up!")
-    end
-    stop
-end
-```
-
-This strategy has two fields: `secs` is used to initialize `secs_end` during the `pre_hook` callback, and `secs_end` is subsequently used to return true from `finished` when the time limit has been exceeded.
-
-Additional built-in strategies can be found in [the code](https://github.com/JuliaML/LearningStrategies.jl/tree/master/src/strategies.jl).  
 
 
 # Acknowledgements
