@@ -56,49 +56,69 @@ function Base.show(io::IO, s::MetaStrategy)
 end
 
 setup!(ms::MetaStrategy, model, data) = foreach(s -> setup!(s, model, data), ms.strategies)
-
 update!(model, s::MetaStrategy, item) = foreach(x -> update!(model, x, item), s.strategies)
-
 hook(s::MetaStrategy, model, data, i) = foreach(x -> hook(x, model, data, i), s.strategies)
-
 finished(s::MetaStrategy, model, data, i) = any(x -> finished(x, model, data, i),  s.strategies)
-
 cleanup!(s::MetaStrategy, model) = foreach(x -> cleanup!(x, model),    s.strategies)
 
+"""
+    strategy(s::LearningStrategy...)
+    strategy(ms::MetaStrategy, s::LearningStrategy...)
 
+Create a MetaStrategy from LearningStrategies or add a LearningStrategy to an existing MetaStrategy.
+"""
 strategy(s::LearningStrategy...) = MetaStrategy(s)
 strategy(ms::MetaStrategy, s::LearningStrategy...) = MetaStrategy(ms.strategies..., s...)
 
 
 
 #-----------------------------------------------------------------------# LearnType
+"""
+    LearnType.Offline()
+    LearnType.Online()
+
+The last argument to `learn!(model, strategy, data, learntype)`.
+
+- `LearnType.Offline()`:  Each item in the main loop is the entire data.
+- `LearnType.Offline()`:  Each item in the main loop is from `enumerate`
+"""
 module LearnType
     struct Offline end
     struct Online  end
 end
 
 #-----------------------------------------------------------------------# Online learn!
-function learn!(model, meta::LearningStrategy, data, ::LearnType.Online = LearnType.Online())
-    setup!(meta, model, data)
+"""
+    learn!(model, strategy, data)
+
+Learn a `model` from `data` using `strategy` in an online fashion.
+"""
+function learn!(model, s::LearningStrategy, data, ::LearnType.Online = LearnType.Online())
+    setup!(s, model, data)
     for (i, item) in enumerate(data)
-        update!(model, meta, item)
-        hook(meta, model, i)
-        finished(meta, model, data, i) && break
+        update!(model, s, item)
+        hook(s, model, data, i)
+        finished(s, model, data, i) && break
     end
-    cleanup!(meta, model)
+    cleanup!(s, model)
 end
 
 #-----------------------------------------------------------------------# Offline learn!
-function learn!(model, meta::LearningStrategy, data, ::LearnType.Offline)
-    setup!(meta, model, data)
+"""
+    learn!(model, strategy, data, learntype = LearnType.Offline())
+
+Learn a `model` from `data` using `strategy` in an offline fashion.
+"""
+function learn!(model, s::LearningStrategy, data, ::LearnType.Offline)
+    setup!(s, model, data)
     i = 1
     while true
-        update!(model, meta, data)
-        hook(meta, model, i)
-        finished(meta, model, data, i) && break
+        update!(model, s, data)
+        hook(s, model, data, i)
+        finished(s, model, data, i) && break
         i += 1
     end
-    cleanup!(meta, model)
+    cleanup!(s, model)
 end
 
 #-----------------------------------------------------------------------# InfiniteNothing
@@ -108,7 +128,12 @@ Base.start(itr::InfiniteNothing) = 1
 Base.done(itr::InfiniteNothing, i) = false
 Base.next(itr::InfiniteNothing, i) = (nothing, i + 1)
 
-learn!(model, meta::LearningStrategy) = learn!(model, meta, InfiniteNothing())
+"""
+    learn!(model, strategy)
+
+Learn a `model` using `strategy`.
+"""
+learn!(model, s::LearningStrategy) = learn!(model, s, InfiniteNothing())
 
 
 
@@ -122,6 +147,10 @@ learn!(model, meta::LearningStrategy) = learn!(model, meta, InfiniteNothing())
     Verbose(s::LearningStrategy)
 
 Allow the LearningStrategy `s` to print output.
+
+- Will automatically print when `finished(s, args...) == true`.
+- Other methods should be overloaded to add printout.
+    - For example: `update!(model, v::Verbose{MyStrategy}, item) = ...`
 """
 struct Verbose{S <: LearningStrategy} <: LearningStrategy
     strategy::S
@@ -180,6 +209,7 @@ end
 Converged(f::Function; tol::Number = 1e-6, every::Int = 1) = Converged(f, tol, every, zeros(0))
 
 setup!(s::Converged, model, data) = (s.lastval = zeros(s.f(model)); return)
+
 function finished(strat::Converged, model, data, i)
     val = strat.f(model)
     if norm(val - strat.lastval) <= strat.tol
@@ -193,6 +223,25 @@ function finished(v::Verbose{<:Converged}, model, data, i)
     done = finished(v.strategy, model, data, i)
     done && info("Converged after $i iterations: $(v.strategy.f(model))")
     done
+end
+
+#-----------------------------------------------------------------------# Tracer
+"""
+    Tracer{T}(::Type{T}, f, b=1)
+
+Store `f(model, i)` every `b` iterations.
+"""
+struct Tracer{S} <: LearningStrategy
+    every::Int
+    f::Function
+    storage::Vector{S}
+end
+Tracer{S}(::Type{S}, f::Function, every::Int = 1) = Tracer(every, f, S[])
+function hook(strat::Tracer, model, i)
+    if mod1(i, strat.every) == strat.every
+        push!(strat.storage, strat.f(model, i))
+    end
+    return
 end
 
 
@@ -273,22 +322,6 @@ function hook(strat::IterFunction, model, i)
     return
 end
 
-#-----------------------------------------------------------------------# Tracer
-"""
-    Tracer{T}(::Type{T}, f, b=1)
-Store `f(model, i)` every `b` iterations.
-"""
-struct Tracer{S} <: LearningStrategy
-    every::Int
-    f::Function
-    storage::Vector{S}
-end
-Tracer{S}(::Type{S}, f::Function, every::Int = 1) = Tracer(every, f, S[])
-function hook(strat::Tracer, model, i)
-    if mod1(i, strat.every) == strat.every
-        push!(strat.storage, strat.f(model, i))
-    end
-    return
-end
+
 
 end # module
