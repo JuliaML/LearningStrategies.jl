@@ -153,19 +153,21 @@ Allow the LearningStrategy `s` to print output.
 - Other methods should be overloaded to add printout.
     - For example: `update!(model, v::Verbose{MyStrategy}, item) = ...`
 """
-struct Verbose{S <: LearningStrategy, T <: IO} <: LearningStrategy
+struct Verbose{S <: LearningStrategy} <: LearningStrategy
     strategy::S
-    io::T
 end
-Verbose(s::LearningStrategy) = Verbose(s, STDOUT)
 
 Base.show(io::IO, v::Verbose) = print(io, "Verbose ", v.strategy)
 
+setup!(v::Verbose, model, data) = setup!(v.strategy, model, data)
+update!(v::Verbose, model, item) = update!(v.strategy, model, item)
+hook(v::Verbose, model, i) = hook(v.strategy, model, i)
 function finished(v::Verbose, model, data, i)
     done = finished(v.strategy, model, data, i)
     done && info("$(v.strategy) finished")
     done
 end
+cleanup!(v::Verbose, model) = cleanup!(v.strategy, model)
 
 
 #-----------------------------------------------------------------------# MaxIter

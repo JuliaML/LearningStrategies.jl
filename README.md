@@ -34,57 +34,38 @@ function learn!(model, strat::LearningStrategy, data)
 end
 ```
 
-## Example
+For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.
+
+## Examples
+
+### Learning with a single LearningStrategy
 
 ```julia
-using LearningStrategies
-import LearningStrategies: update!
+julia> using LearningStrategies
 
-struct Model
-    params::Vector{Float64}
-end
-function update!(m::Model, s::LearningStrategy, item)
-    rand!(m.params)
-end
+julia> s = Verbose(TimeLimit(2))
+Verbose TimeLimit(2.0)
 
-m = Model(rand(5))
-learn!(m, MaxIter(5))
-learn!(m, Verbose(MaxIter(5)))
+julia> learn!(nothing, s)
+INFO: TimeLimit(2.0) finished
+
+julia> @elapsed learn!(nothing, s)
+INFO: TimeLimit(2.0) finished
+2.000225545
 ```
 
-At the core of LearningStrategies is the `MetaStrategy` type, which binds together many functionally independent learning strategies and controls the iterative loop.  The core loop is:
+### Learning with a MetaLearner
 
 ```julia
-function learn!(model, meta::Strategy, data)
-    setup!(meta, model)
-    for (i, item) in enumerate(data)
-        update!(model, meta, item)
-        hook(meta, model, i)
-        finished(meta, model, i) && break
-    end
-    cleanup!(meta, model)
-end
-```
+julia> using LearningStrategies
 
-Each of these callbacks will trigger the implemented callbacks of the sub-strategies, allowing you to compile complex behavior from simple components.
+julia> s = strategy(Verbose(MaxIter(5)), TimeLimit(10))
+MetaStrategy
+  > Verbose MaxIter(5)
+  > TimeLimit(10.0)
 
-The above loop sends data to the MetaLearner in an online fashion.  LearningStrategies can also be used for offline algorithms via
-```julia
-learn!(model, meta, data, LearnType.Offline())
-```
-
-```julia
-function learn!(model, meta::MetaLearner, data, ::LearnType.Offline)
-    pre_hook(meta, model)
-    i = 1
-    while true
-        update!(model, meta, data)
-        iter_hook(meta, model, i)
-        finished(meta, model, i) && break
-        i += 1
-    end
-    post_hook(meta, model)
-end
+julia> learn!(nothing, s, 1:100)
+INFO: MaxIter(5) finished
 ```
 
 
@@ -124,10 +105,12 @@ end
 
 This strategy has two fields: `secs` is used to initialize `secs_end` during the `pre_hook` callback, and `secs_end` is subsequently used to return true from `finished` when the time limit has been exceeded.
 
-Additional built-in strategies can be found in [the code](https://github.com/JuliaML/LearningStrategies.jl/tree/master/src/strategies.jl).  More complex examples can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
+Additional built-in strategies can be found in [the code](https://github.com/JuliaML/LearningStrategies.jl/tree/master/src/strategies.jl).  
 
 
 # Acknowledgements
 LearningStrategies is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
+
+Complex LearningStrategy examples can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
 
 ## Primary author: [Tom Breloff](https://github.com/tbreloff)
