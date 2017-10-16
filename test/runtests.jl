@@ -50,6 +50,19 @@ end
     elapsed = time() - t1
     @test .5 <= elapsed < 1
 end
+@testset "Converged" begin
+    learn!(nothing, Converged(x -> 1))
+end
+@testset "ConvergenceFunction" begin
+    m = Model(0)
+    learn!(m, strategy(NewStrat(), ConvergenceFunction((m,i) -> m.n==10)))
+    @test m.n == 10
+end
+@testset "Tracer" begin
+    t = Tracer(Int, (mod,i) -> i)
+    learn!(nothing, strategy(MaxIter(100), t))
+    @test t.storage == collect(1:100)
+end
 
 
 #

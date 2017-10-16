@@ -145,6 +145,7 @@ learn!(model, s::LearningStrategy) = learn!(model, s, InfiniteNothing())
 #-----------------------------------------------------------------------# Verbose
 """
     Verbose(s::LearningStrategy)
+    Verbose(s::LearningStrategy, io::IO)
 
 Allow the LearningStrategy `s` to print output.
 
@@ -152,9 +153,11 @@ Allow the LearningStrategy `s` to print output.
 - Other methods should be overloaded to add printout.
     - For example: `update!(model, v::Verbose{MyStrategy}, item) = ...`
 """
-struct Verbose{S <: LearningStrategy} <: LearningStrategy
+struct Verbose{S <: LearningStrategy, T <: IO} <: LearningStrategy
     strategy::S
+    io::T
 end
+Verbose(s::LearningStrategy) = Verbose(s, STDOUT)
 
 Base.show(io::IO, v::Verbose) = print(io, "Verbose ", v.strategy)
 
@@ -244,19 +247,25 @@ function hook(strat::Tracer, model, i)
     return
 end
 
-
-
-
-
 #-----------------------------------------------------------------------# ConvergenceFunction
 """
     ConvergenceFunction(f)
+
 Stop learning when `f(model, i)` returns true.
 """
-struct ConvergenceFunction <: LearningStrategy
-    f::Function
+struct ConvergenceFunction{F<:Function} <: LearningStrategy
+    f::F
 end
 finished(strat::ConvergenceFunction, model, data, i)::Bool = strat.f(model, i)
+
+
+
+
+
+
+#-----------------------------------------------------------------------# TODO:
+
+
 
 
 
@@ -264,6 +273,7 @@ finished(strat::ConvergenceFunction, model, data, i)::Bool = strat.f(model, i)
 """
     ShowStatus(b = 1)
     ShowStatus(b, f)
+
 Every `b` iterations, print the output of `f(model, i)`.
 """
 struct ShowStatus <: LearningStrategy
@@ -284,6 +294,7 @@ end
 #-----------------------------------------------------------------------# ConvergedTo
 """
     ConvergedTo(f, goal; tol=1e-6, every=1)
+
 Stop learning when `‖f(model) - goal‖ ≦ tol`.
 """
 struct ConvergedTo{V} <: LearningStrategy
