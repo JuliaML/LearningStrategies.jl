@@ -4,7 +4,7 @@ module LearningStrategies
 import LearnBase: learn!, update!
 
 export
-    LearningStrategy, MetaStrategy, strategy, Offline, InfiniteNothing, 
+    LearningStrategy, MetaStrategy, strategy, Offline, InfiniteNothing,
     # LearningStrategies
     Verbose, MaxIter, TimeLimit, Converged, ConvergedTo, IterFunction, Tracer, Breaker,
     # functions
@@ -282,7 +282,7 @@ struct Tracer{S} <: LearningStrategy
     storage::Vector{S}
 end
 Tracer{S}(::Type{S}, f::Function, every::Int = 1) = Tracer(every, f, S[])
-Base.show(io::IO, s::Tracer) = print(io, "Tracer($(s.every), $(s.f), $(summary(s.storage))")
+Base.show(io::IO, s::Tracer) = print(io, "Tracer($(s.every), $(s.f), $(summary(s.storage)))")
 function hook(strat::Tracer, model, i)
     if mod1(i, strat.every) == strat.every
         push!(strat.storage, strat.f(model, i))
