@@ -78,4 +78,22 @@ end
     s = strategy(MaxIter(2), IterFunction((m,i) -> println("    print 2 times!")))
     @inferred learn!(model, s)
 end
+
+
+#-------------------------------------------------------------------# Linear Regression Example
+struct LinRegModel
+    β::Vector
+end
+struct LinRegSolver <: LearningStrategy end
+update!(m::LinRegModel, s::LinRegSolver, item) = (m.β[:] = item[1] \ item[2])
+
+@testset "LinRegModel" begin
+    n, p = 100, 5
+    x = randn(n, p)
+    y = x * linspace(-1, 1, p) + randn(n)
+
+    model = LinRegModel(zeros(p))
+    learn!(model, strategy(MaxIter(1), LinRegSolver()), Offline((x,y)))
+    @test model.β == x \ y
+end
 end

@@ -1,7 +1,7 @@
 # LearningStrategies
-| Master Build | Discussion |
-|--------------|------------|
-| [![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl) | [![Gitter chat](https://badges.gitter.im/JuliaML/chat.svg)](https://gitter.im/JuliaML/chat) |
+| Master Build | Test Coverage | Discussion |
+|--------------|---------------|------------|
+| [![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl) | [![codecov](https://codecov.io/gh/JuliaML/LearningStrategies.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaML/LearningStrategies.jl) | [![Gitter chat](https://badges.gitter.im/JuliaML/chat.svg)](https://gitter.im/JuliaML/chat) |
 
 **LearningStrategies is a modular framework for building iterative algorithms in Julia**.  
 
@@ -20,7 +20,7 @@ cleanup
 
 
 ## MetaStrategy
-The core function of LearningStrategies is a straightforward implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.
+The core function of LearningStrategies is a straightforward implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.  `data` is passed to the learning strategies differently depending on
 
 ```julia
 function learn!(model, strat::LearningStrategy, data)
@@ -33,6 +33,7 @@ function learn!(model, strat::LearningStrategy, data)
     cleanup!(strat, model)
 end
 ```
+
 
 For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.
 

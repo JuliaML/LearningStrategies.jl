@@ -4,7 +4,7 @@ module LearningStrategies
 import LearnBase: learn!, update!
 
 export
-    LearningStrategy, MetaStrategy, strategy, LearnType,
+    LearningStrategy, MetaStrategy, strategy, Offline,
     # LearningStrategies
     Verbose, MaxIter, TimeLimit, ConvergenceFunction, IterFunction, ShowStatus, Tracer,
     Converged, ConvergedTo,
@@ -71,29 +71,13 @@ strategy(s::LearningStrategy...) = MetaStrategy(s)
 strategy(ms::MetaStrategy, s::LearningStrategy...) = MetaStrategy(ms.strategies..., s...)
 
 
-
-#-----------------------------------------------------------------------# LearnType
-"""
-    LearnType.Offline()
-    LearnType.Online()
-
-The last argument to `learn!(model, strategy, data, learntype)`.
-
-- `LearnType.Offline()`:  Each item in the main loop is the entire data.
-- `LearnType.Offline()`:  Each item in the main loop is from `enumerate`
-"""
-module LearnType
-    struct Offline end
-    struct Online  end
-end
-
-#-----------------------------------------------------------------------# Online learn!
+#-----------------------------------------------------------------------# learn!
 """
     learn!(model, strategy, data)
 
 Learn a `model` from `data` using `strategy` in an online fashion.
 """
-function learn!(model, s::LearningStrategy, data, ::LearnType.Online = LearnType.Online())
+function learn!(model, s::LearningStrategy, data)
     setup!(s, model, data)
     for (i, item) in enumerate(data)
         update!(model, s, item)
@@ -103,23 +87,13 @@ function learn!(model, s::LearningStrategy, data, ::LearnType.Online = LearnType
     cleanup!(s, model)
 end
 
-#-----------------------------------------------------------------------# Offline learn!
-"""
-    learn!(model, strategy, data, learntype = LearnType.Offline())
-
-Learn a `model` from `data` using `strategy` in an offline fashion.
-"""
-function learn!(model, s::LearningStrategy, data, ::LearnType.Offline)
-    setup!(s, model, data)
-    i = 1
-    while true
-        update!(model, s, data)
-        hook(s, model, data, i)
-        finished(s, model, data, i) && break
-        i += 1
-    end
-    cleanup!(s, model)
+#-----------------------------------------------------------------------# Offline
+struct Offline{T}
+    data::T
 end
+Base.start(o::Offline) = 1
+Base.done(o::Offline, i) = false
+Base.next(o::Offline, i) = (o.data, i + 1)
 
 #-----------------------------------------------------------------------# InfiniteNothing
 # learn without input data... good for minimizing functions
