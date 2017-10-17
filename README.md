@@ -20,7 +20,7 @@ cleanup
 
 
 ## MetaStrategy
-The core function of LearningStrategies is a straightforward implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.  
+The core function of LearningStrategies is a straightforward abstract implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.  
 
 ```julia
 function learn!(model, strat::LearningStrategy, data)
@@ -60,7 +60,7 @@ julia> using LearningStrategies
 julia> s = Verbose(TimeLimit(2))
 Verbose TimeLimit(2.0)
 
-julia> @elapsed learn!(nothing, s)
+julia> @elapsed learn!(nothing, s)  # data == InfiniteNothing()
 INFO: TimeLimit(2.0) finished
 2.000225545
 ```

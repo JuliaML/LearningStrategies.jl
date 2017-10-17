@@ -4,7 +4,7 @@ module LearningStrategies
 import LearnBase: learn!, update!
 
 export
-    LearningStrategy, MetaStrategy, strategy, Offline,
+    LearningStrategy, MetaStrategy, strategy, Offline, InfiniteNothing, 
     # LearningStrategies
     Verbose, MaxIter, TimeLimit, Converged, ConvergedTo, IterFunction, Tracer, Breaker,
     # functions
