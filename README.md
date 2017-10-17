@@ -20,7 +20,7 @@ cleanup
 
 
 ## MetaStrategy
-The core function of LearningStrategies is a straightforward implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.  `data` is passed to the learning strategies differently depending on
+The core function of LearningStrategies is a straightforward implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.  
 
 ```julia
 function learn!(model, strat::LearningStrategy, data)
@@ -34,8 +34,21 @@ function learn!(model, strat::LearningStrategy, data)
 end
 ```
 
+For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.  The entire dataset can be included in the inner loop (`item == data`) by passing the argument `Offline(data)`.
 
-For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.
+## Built In Strategies
+
+See help (i.e. `?MaxIter`) for more info.
+
+- `MetaStrategy`
+- `MaxIter`
+- `TimeLimit`
+- `Converged`
+- `ConvergedTo`
+- `IterFunction`
+- `Tracer`
+- `Breaker`
+- `Verbose`
 
 ## Examples
 
@@ -70,6 +83,6 @@ INFO: MaxIter(5) finished
 # Acknowledgements
 LearningStrategies is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
 
-Complex LearningStrategy examples can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
+Complex LearningStrategy examples can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from Tom Breloff's [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
 
 ## Primary author: [Tom Breloff](https://github.com/tbreloff)

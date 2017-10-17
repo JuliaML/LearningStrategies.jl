@@ -6,8 +6,7 @@ import LearnBase: learn!, update!
 export
     LearningStrategy, MetaStrategy, strategy, Offline,
     # LearningStrategies
-    Verbose, MaxIter, TimeLimit, ConvergenceFunction, IterFunction, ShowStatus, Tracer,
-    Converged, ConvergedTo,
+    Verbose, MaxIter, TimeLimit, Converged, ConvergedTo, IterFunction, Tracer, Breaker,
     # functions
     setup!, update!, hook, finished, cleanup!, learn!
 
@@ -58,8 +57,8 @@ end
 setup!(ms::MetaStrategy, model, data) = foreach(s -> setup!(s, model, data), ms.strategies)
 update!(model, s::MetaStrategy, item) = foreach(x -> update!(model, x, item), s.strategies)
 hook(s::MetaStrategy, model, data, i) = foreach(x -> hook(x, model, data, i), s.strategies)
-finished(s::MetaStrategy, model, data, i) = any(x -> finished(x, model, data, i),  s.strategies)
-cleanup!(s::MetaStrategy, model) = foreach(x -> cleanup!(x, model),    s.strategies)
+finished(s::MetaStrategy, model, data, i) = any(x -> finished(x, model, data, i), s.strategies)
+cleanup!(s::MetaStrategy, model) = foreach(x -> cleanup!(x, model), s.strategies)
 
 """
     strategy(s::LearningStrategy...)
@@ -75,7 +74,25 @@ strategy(ms::MetaStrategy, s::LearningStrategy...) = MetaStrategy(ms.strategies.
 """
     learn!(model, strategy, data)
 
-Learn a `model` from `data` using `strategy` in an online fashion.
+Learn a `model` from `data` using `strategy`.  New models/strategies/data types should overload at least one of the following:
+
+- [`setup!`](@ref)
+- [`update!`](@ref)
+- [`hook`](@ref)
+- [`finished`](@ref)
+- [`cleanup!`](@ref)
+
+# `learn!` Implementation:
+
+    function learn!(model, s::LearningStrategy, data)
+        setup!(s, model, data)
+        for (i, item) in enumerate(data)
+            update!(model, s, item)
+            hook(s, model, data, i)
+            finished(s, model, data, i) && break
+        end
+        cleanup!(s, model)
+    end
 """
 function learn!(model, s::LearningStrategy, data)
     setup!(s, model, data)
@@ -88,9 +105,15 @@ function learn!(model, s::LearningStrategy, data)
 end
 
 #-----------------------------------------------------------------------# Offline
+"""
+    Offline(data)
+
+Send all of `data` into the loop of `learn!(model, strategy, data)` at each iteration.
+"""
 struct Offline{T}
     data::T
 end
+Offline(args...) = Offline(args)
 Base.start(o::Offline) = 1
 Base.done(o::Offline, i) = false
 Base.next(o::Offline, i) = (o.data, i + 1)
@@ -102,19 +125,12 @@ Base.start(itr::InfiniteNothing) = 1
 Base.done(itr::InfiniteNothing, i) = false
 Base.next(itr::InfiniteNothing, i) = (nothing, i + 1)
 
-"""
-    learn!(model, strategy)
-
-Learn a `model` using `strategy`.
-"""
 learn!(model, s::LearningStrategy) = learn!(model, s, InfiniteNothing())
 
 
 
 
-#-----------------------------------------------------------------------#
-#                           Below here are built-in LearningStrategies
-#-----------------------------------------------------------------------#
+################################################################################## Strategies
 
 #-----------------------------------------------------------------------# Verbose
 """
@@ -172,7 +188,6 @@ Base.show(io::IO, s::TimeLimit) = print(io, "TimeLimit($(s.secs))")
 setup!(strat::TimeLimit, model, data) = (strat.secs_end = time() + strat.secs)
 finished(strat::TimeLimit, model, data, i) = time() >= strat.secs_end
 
-
 #-----------------------------------------------------------------------# Converged
 """
     Converged(f; tol = 1e-6, every = 1)
@@ -186,6 +201,8 @@ mutable struct Converged{F <: Function} <: LearningStrategy
     lastval::Vector{Float64}
 end
 Converged(f::Function; tol::Number = 1e-6, every::Int = 1) = Converged(f, tol, every, zeros(0))
+
+Base.show(io::IO, s::Converged) = print(io, "Converged($(s.f), $(s.tol), $(s.every))")
 
 setup!(s::Converged, model, data) = (s.lastval = zeros(s.f(model)); return)
 
@@ -204,69 +221,6 @@ function finished(v::Verbose{<:Converged}, model, data, i)
     done
 end
 
-#-----------------------------------------------------------------------# Tracer
-"""
-    Tracer{T}(::Type{T}, f, b=1)
-
-Store `f(model, i)` every `b` iterations.
-"""
-struct Tracer{S} <: LearningStrategy
-    every::Int
-    f::Function
-    storage::Vector{S}
-end
-Tracer{S}(::Type{S}, f::Function, every::Int = 1) = Tracer(every, f, S[])
-function hook(strat::Tracer, model, i)
-    if mod1(i, strat.every) == strat.every
-        push!(strat.storage, strat.f(model, i))
-    end
-    return
-end
-
-#-----------------------------------------------------------------------# ConvergenceFunction
-"""
-    ConvergenceFunction(f)
-
-Stop learning when `f(model, i)` returns true.
-"""
-struct ConvergenceFunction{F<:Function} <: LearningStrategy
-    f::F
-end
-finished(strat::ConvergenceFunction, model, data, i)::Bool = strat.f(model, i)
-
-
-
-
-
-
-#-----------------------------------------------------------------------# TODO:
-
-
-
-
-
-#-----------------------------------------------------------------------# ShowStatus
-"""
-    ShowStatus(b = 1)
-    ShowStatus(b, f)
-
-Every `b` iterations, print the output of `f(model, i)`.
-"""
-struct ShowStatus <: LearningStrategy
-    every::Int
-    f::Function
-end
-ShowStatus(every::Int = 1) = ShowStatus(every, (model, i) -> "Iteration $i: $(params(model))")
-setup!(strat::ShowStatus, model, data) = hook(strat, model, 0)
-function hook(strat::ShowStatus, model, i)
-    mod1(i, strat.every) == strat.every && println(strat.f(model, i))
-    return
-end
-
-
-
-
-
 #-----------------------------------------------------------------------# ConvergedTo
 """
     ConvergedTo(f, goal; tol=1e-6, every=1)
@@ -282,6 +236,7 @@ end
 function ConvergedTo(f::Function, goal; tol::Number = 1e-6, every::Int = 1)
     ConvergedTo(f, tol, goal, every)
 end
+Base.show(io::IO, s::ConvergedTo) = print(io, "ConvergedTo($(s.f), $(s.tol), $(s.goal), $(s.every))")
 function finished(strat::ConvergedTo, model, data, i)
     val = strat.f(model)
     if norm(val - strat.goal) <= strat.tol
@@ -294,20 +249,63 @@ end
 
 #-----------------------------------------------------------------------# IterFunction
 """
-    IterFunction(f, b=1)
+    IterFunction(f, b)
+    IterFunction(b, f)
+
 Call `f(model, i)` every `b` iterations.
 """
-struct IterFunction <: LearningStrategy
-    f::Function
-    every::Int
+struct IterFunction{F<:Function} <: LearningStrategy
+    f::F
+    b::Int
 end
-IterFunction(f::Function; every::Int = 1) = IterFunction(f, every)
-function hook(strat::IterFunction, model, i)
-    if mod1(i, strat.every) == strat.every
-        strat.f(model, i)
+IterFunction(f::Function) = IterFunction(f, 1)
+IterFunction(b::Int, f::Function) = IterFunction(f, b)
+
+Base.show(io::IO, o::IterFunction) = print(io, "IterFunction($(o.f), $(o.b))")
+
+function hook(s::IterFunction, model, i)
+    if mod1(i, s.b) == s.b
+        s.f(model, i)
     end
     return
 end
+
+#-----------------------------------------------------------------------# Tracer
+"""
+    Tracer{T}(::Type{T}, f, b=1)
+
+Store `f(model, i)` every `b` iterations.
+"""
+struct Tracer{S} <: LearningStrategy
+    every::Int
+    f::Function
+    storage::Vector{S}
+end
+Tracer{S}(::Type{S}, f::Function, every::Int = 1) = Tracer(every, f, S[])
+Base.show(io::IO, s::Tracer) = print(io, "Tracer($(s.every), $(s.f), $(summary(s.storage))")
+function hook(strat::Tracer, model, i)
+    if mod1(i, strat.every) == strat.every
+        push!(strat.storage, strat.f(model, i))
+    end
+    return
+end
+
+#-----------------------------------------------------------------------# Breaker
+"""
+    Breaker(f)
+
+Stop learning when `f(model, i)` returns true.
+"""
+struct Breaker{F<:Function} <: LearningStrategy
+    f::F
+end
+Base.show(io::IO, s::Breaker) = print(io, "Breaker($(s.f))")
+finished(strat::Breaker, model, data, i)::Bool = strat.f(model, i)
+
+
+
+
+
 
 
 
