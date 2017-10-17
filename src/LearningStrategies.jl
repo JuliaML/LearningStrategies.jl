@@ -157,6 +157,15 @@ function finished(v::Verbose, model, data, i)
     done && info("$(v.strategy) finished")
     done
 end
+function finished(v::Verbose{<:MetaStrategy}, model, data, i)
+    done = finished(v.strategy, model, data, i)
+    if done
+        for s in v.strategy.strategies
+            finished(Verbose(s), model, data, i)
+        end
+    end
+    done
+end
 cleanup!(v::Verbose, model) = cleanup!(v.strategy, model)
 
 
