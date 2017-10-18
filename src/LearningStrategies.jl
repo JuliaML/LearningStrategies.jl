@@ -53,7 +53,7 @@ MetaStrategy(s::LearningStrategy...) = MetaStrategy(s)
 function Base.show(io::IO, s::MetaStrategy)
     println(io, "MetaStrategy")
     println.(io, "  > ", s.strategies[1:(end-1)])
-    print(io, "  > ", s.strategies[end])
+    print(io,    "  > ", s.strategies[end])
 end
 
 setup!(ms::MetaStrategy, model, data) = foreach(s -> setup!(s, model, data), ms.strategies)
@@ -149,12 +149,14 @@ Allow the LearningStrategy `s` to print output.
 struct Verbose{S <: LearningStrategy} <: LearningStrategy
     strategy::S
 end
-
 Base.show(io::IO, v::Verbose) = print(io, "Verbose ", v.strategy)
 
 setup!(v::Verbose, model, data) = setup!(v.strategy, model, data)
-update!(v::Verbose, model, item) = update!(v.strategy, model, item)
-hook(v::Verbose, model, i) = hook(v.strategy, model, i)
+
+update!(model, v::Verbose, item) = update!(model, v.strategy, item)
+
+hook(v::Verbose, model, data, i) = hook(v.strategy, model, data, i)
+
 function finished(v::Verbose, model, data, i)
     done = finished(v.strategy, model, data, i)
     done && info("$(v.strategy) finished")
@@ -216,14 +218,14 @@ Converged(f::Function; tol::Number = 1e-6, every::Int = 1) = Converged(f, tol, e
 
 Base.show(io::IO, s::Converged) = print(io, "Converged($(s.f), $(s.tol), $(s.every))")
 
-setup!(s::Converged, model, data) = (s.lastval = zeros(s.f(model)); return)
+setup!(s::Converged, model, item) = (s.lastval = zeros(s.f(model)); return)
 
-function finished(strat::Converged, model, data, i)
-    val = strat.f(model)
-    if norm(val - strat.lastval) <= strat.tol
+function finished(s::Converged, model, data, i)
+    val = s.f(model)
+    if i > 1 && norm(val - s.lastval) <= s.tol
         true
     else
-        copy!(strat.lastval, val)
+        copy!(s.lastval, val)
         false
     end
 end
