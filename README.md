@@ -1,7 +1,7 @@
 # LearningStrategies
 | Master Build | Test Coverage | Discussion |
 |--------------|---------------|------------|
-| [![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl) | [![codecov](https://codecov.io/gh/JuliaML/LearningStrategies.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaML/LearningStrategies.jl) | [![Gitter chat](https://badges.gitter.im/JuliaML/chat.svg)](https://gitter.im/JuliaML/chat) |
+| [![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl) [![Build status](https://ci.appveyor.com/api/projects/status/ev39pu54fh4x2utl?svg=true)](https://ci.appveyor.com/project/joshday/learningstrategies-jl) | [![codecov](https://codecov.io/gh/JuliaML/LearningStrategies.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaML/LearningStrategies.jl) | [![Gitter chat](https://badges.gitter.im/JuliaML/chat.svg)](https://gitter.im/JuliaML/chat) |
 
 **LearningStrategies is a modular framework for building iterative algorithms in Julia**.  
 
@@ -34,7 +34,8 @@ function learn!(model, strat::LearningStrategy, data)
 end
 ```
 
-For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.  The entire dataset can be included in the inner loop (`item == data`) by passing the argument `Offline(data)`.
+- For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.
+- To let `item == data`, pass the argument `Offline(data)`.
 
 ## Built In Strategies
 
@@ -79,10 +80,44 @@ julia> learn!(nothing, s, 1:100)
 INFO: MaxIter(5) finished
 ```
 
+### Linear Regression Solver
+
+```julia
+using LearningStrategies
+import LearningStrategies: update!, finished
+
+struct MyLinearModel
+    coef
+end
+
+struct MyLinearModelSolver <: LearningStrategy end
+
+update!(model, s::MyLinearModelSolver, xy) = (model.coef[:] = xy[1] \ xy[2])
+
+finished(s::MyLinearModelSolver, model) = true
+
+# generate some fake data
+x = randn(100, 5)
+y = x * linspace(-1, 1, 5) + randn(100)
+
+data = (x, y)
+
+# Create the model
+model = MyLinearModel(zeros(5))
+
+# learn! the model with data (x, y)
+learn!(model, MyLinearModelSolver(), Offline(data))
+
+# check that it works
+model.coef == x \ y
+```
+
 
 # Acknowledgements
-LearningStrategies is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
+LearningStrategies is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and (Tom Breloff's) conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
 
-Complex LearningStrategy examples can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from Tom Breloff's [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
+Complex LearningStrategy examples (using previous LearningStrategies versions) can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from Tom Breloff's [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
+
+Examples using the current version can be found in [SparseRegression](https://github.com/joshday/SparseRegression.jl).
 
 ## Primary author: [Tom Breloff](https://github.com/tbreloff)
