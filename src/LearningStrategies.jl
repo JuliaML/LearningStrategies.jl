@@ -25,12 +25,14 @@ abstract type LearningStrategy end
 setup!(s::LearningStrategy, model) = nothing
 setup!(s::LearningStrategy, model, data) = setup!(s, model)
 
-update!(model, s::LearningStrategy, item) = nothing
+update!(model, s::LearningStrategy) = nothing
+update!(model, s::LearningStrategy, item) = update!(model, s)
 
 hook(s::LearningStrategy, model, i) = nothing
 hook(s::LearningStrategy, model, data, i) = hook(s, model, i)
 
-finished(s::LearningStrategy, model, i) = false
+finished(s::LearningStrategy, model) = false
+finished(s::LearningStrategy, model, i) = finished(s, model)
 finished(s::LearningStrategy, model, data, i) = finished(s, model, i)
 
 cleanup!(s::LearningStrategy, model) = nothing
@@ -102,6 +104,7 @@ function learn!(model, s::LearningStrategy, data)
         finished(s, model, data, i) && break
     end
     cleanup!(s, model)
+    model
 end
 
 #-----------------------------------------------------------------------# Offline
