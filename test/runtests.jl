@@ -1,91 +1,98 @@
 module LearningStrategiesTest
-using LearningStrategies
-using Base.Test
 
+using LearningStrategies, Base.Test
+import LearningStrategies: update!
 
+mutable struct Model n::Int end
+struct NewStrat <: LearningStrategy end
+update!(m::Model, s::NewStrat, item) = (m.n += 1)
 
+#-----------------------------------------------------------------------# Verbose
+info("Verbose")
+learn!(nothing, Verbose(MaxIter(5)), 1:10)
+learn!(nothing, Verbose(TimeLimit(.5)))
+learn!(Model(5), Verbose(Converged(m -> m.n == 5)))
 
+#-----------------------------------------------------------------------# Type stability
+info("Type Stability and Printing")
 strat_list = [
     MaxIter(20),
     TimeLimit(2),
-    ShowStatus(1, (m, i) -> "$m after $i iterations"),
-    ConvergenceFunction((m, i) -> true),
     Converged(m -> m),
     ConvergedTo(m -> m, ones(2)),
-    IterFunction((m, i) -> println("this is iteration $i")),
+    IterFunction((m, i) -> i),
+    Breaker((m, i) -> true),
     Tracer(Float64, (m, i) -> mean(m))
 ]
-@testset "Type stability" begin
-    m = ones(2)
-    i = 5
-    for s in strat_list
-        println("  > ", s)
-        # println("    - ", "pre_hook")
-        @inferred pre_hook(s, m)
-        # println("    - ", "post_hook")
-        @inferred post_hook(s, m)
-        # println("    - ", "iter_hook")
-        @inferred iter_hook(s, m, i)
-        # println("    - ", "finished")
-        @inferred finished(s, m, i)
-        # println("    - ", "update!")
-        @inferred update!(m, s, i)
+println(strategy(strat_list...))
+m = ones(2)
+i = 5
+for s in strat_list
+    println("  > ", s)
+    @inferred setup!(s, m, nothing)
+    @inferred cleanup!(s, m)
+    @inferred hook(s, m, i)
+    @inferred finished(s, m, nothing, i)
+    @inferred update!(m, s, i)
+end
+
+#-----------------------------------------------------------------------# "Real" Tests
+@testset "MaxIter" begin
+    for j in 1:10
+        m = Model(0)
+        learn!(m, strategy(MaxIter(j), NewStrat()), 1:100)
+        @test m.n == j
     end
 end
-
-@testset "MaxIter/IterFunction" begin
-    model = [0]
-    s = make_learner(MaxIter(20), IterFunction((m,i) -> (m[1] += 1)))
-    @inferred learn!(model, s)
-    @test model[1] == 20
-end
-
 @testset "TimeLimit" begin
-    model = nothing
-    s = make_learner(TimeLimit(2))
     t1 = time()
-    @inferred learn!(model, s)
+    learn!(nothing, TimeLimit(.5))
     elapsed = time() - t1
-    @test elapsed < 3
+    @test .5 <= elapsed < 1
 end
-
-@testset "ShowStatus" begin
-    model = nothing
-    s = make_learner(MaxIter(2), ShowStatus(1, (m, i) -> "    model is still $model"))
-    @inferred learn!(model, s)
-end
-
-@testset "ConvergenceFunction" begin
-    model = nothing
-    s = make_learner(ConvergenceFunction((m,i) -> true))
-    @inferred learn!(model, s)
-end
-
 @testset "Converged" begin
-    model = ones(5)
-    s = make_learner(Converged(m -> m))
-    @inferred learn!(model, s)
+    learn!(nothing, Converged(x -> 1))
 end
-
 @testset "ConvergedTo" begin
     model = ones(5)
-    s = make_learner(ConvergedTo(m -> m, ones(5)))
+    s = strategy(ConvergedTo(m -> m, ones(5)))
     @inferred learn!(model, s)
 end
-
 @testset "IterFunction" begin
-    model = ones(5)
-    s = make_learner(MaxIter(2), IterFunction((m,i) -> println("    print 2 times!")))
-    @inferred learn!(model, s)
+    s = IterFunction(1, (m,i) -> println("Print twice:  > $i"))
+    learn!(nothing, strategy(s, MaxIter(2)))
 end
-
 @testset "Tracer" begin
-    model = 1.0
-    s = make_learner(MaxIter(3), Tracer(Float64, (m,i) -> m))
-    @inferred learn!(model, s)
-    @test s.managers[2].storage == ones(3)
+    t = Tracer(Int, (mod,i) -> i)
+    learn!(nothing, strategy(MaxIter(100), t))
+    @test t.storage == collect(1:100)
+end
+@testset "Breaker" begin
+    m = Model(0)
+    learn!(m, strategy(NewStrat(), Breaker((m,i) -> m.n==10)))
+    @test m.n == 10
 end
 
 
 
+
+
+#-------------------------------------------------------------------# Linear Regression Example
+struct LinRegModel
+    β::Vector
+end
+struct LinRegSolver <: LearningStrategy end
+update!(m::LinRegModel, s::LinRegSolver, item) = (m.β[:] = item[1] \ item[2])
+
+@testset "LinRegModel" begin
+    n, p = 1000, 50
+    x = randn(n, p)
+    y = x * linspace(-1, 1, p) + randn(n)
+
+    model = LinRegModel(zeros(p))
+    s = strategy(MaxIter(1), LinRegSolver())
+    data = Offline(x, y)
+    learn!(model, s, data)
+    @test model.β == x \ y
+end
 end

@@ -1,94 +1,88 @@
 # LearningStrategies
+| Master Build | Test Coverage | Discussion |
+|--------------|---------------|------------|
+| [![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl) | [![codecov](https://codecov.io/gh/JuliaML/LearningStrategies.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaML/LearningStrategies.jl) | [![Gitter chat](https://badges.gitter.im/JuliaML/chat.svg)](https://gitter.im/JuliaML/chat) |
 
-[![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl)   [![Gitter chat](https://badges.gitter.im/JuliaML/chat.png)](https://gitter.im/JuliaML/chat)
-
-LearningStrategies is a generic and modular framework for building custom iterative algorithms in Julia.  It is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
+**LearningStrategies is a modular framework for building iterative algorithms in Julia**.  
 
 ## Basics
 
-Most algorithms can be generalized to perform custom implementations of the following form (in pseudocode):
+Many algorithms can be generalized to the following pseudocode:
 
 ```
 setup
 while not finished:
-    update_model
-    iteration_logic
-end while
+    (update model)
+    (iteration logic)
 cleanup
 ```
 
-LearningStrategies provides a generic interface, along with common functionality.  At its core is the `MetaLearner` type, which binds together many functionally independent learning strategies and controls the iterative loop.  The core loop is:
+
+
+## MetaStrategy
+The core function of LearningStrategies is a straightforward abstract implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.  
 
 ```julia
-function learn!(model, meta::MetaLearner, data)
-    pre_hook(meta, model)
+function learn!(model, strat::LearningStrategy, data)
+    setup!(strat, model)
     for (i, item) in enumerate(data)
-        update!(model, meta, item)
-        iter_hook(meta, model, i)
-        finished(meta, model, i) && break
+        update!(model, strat, item)
+        hook(strat, model, i)
+        finished(strat, model, i) && break
     end
-    post_hook(meta, model)
+    cleanup!(strat, model)
 end
 ```
 
-Each of these callbacks will trigger the implemented callbacks of the sub-strategies, allowing you to compile complex behavior from simple components.
+For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.  The entire dataset can be included in the inner loop (`item == data`) by passing the argument `Offline(data)`.
 
-The above loop sends data to the MetaLearner in an online fashion.  LearningStrategies can also be used for offline algorithms via
-```julia
-learn!(model, meta, data, LearnType.Offline())
-```
+## Built In Strategies
 
-```julia
-function learn!(model, meta::MetaLearner, data, ::LearnType.Offline)
-    pre_hook(meta, model)
-    i = 1
-    while true
-        update!(model, meta, data)
-        iter_hook(meta, model, i)
-        finished(meta, model, i) && break
-        i += 1
-    end
-    post_hook(meta, model)
-end
-```
+See help (i.e. `?MaxIter`) for more info.
 
+- `MetaStrategy`
+- `MaxIter`
+- `TimeLimit`
+- `Converged`
+- `ConvergedTo`
+- `IterFunction`
+- `Tracer`
+- `Breaker`
+- `Verbose`
 
-## Simple example
+## Examples
+
+### Learning with a single LearningStrategy
 
 ```julia
 julia> using LearningStrategies
 
-julia> model = nothing
+julia> s = Verbose(TimeLimit(2))
+Verbose TimeLimit(2.0)
 
-julia> strat = make_learner(TimeLimit(2))
-LearningStrategies.MetaLearner{Tuple{LearningStrategies.TimeLimit}}((LearningStrategies.TimeLimit(2.0,0.0),))
-
-julia> @time learn!(model, strat)
-INFO: Time's up!
-  2.068520 seconds (39.50 k allocations: 1.735 MB)
+julia> @elapsed learn!(nothing, s)  # data == InfiniteNothing()
+INFO: TimeLimit(2.0) finished
+2.000225545
 ```
 
-Following through this very short example, we see that we have built a MetaLearner that contains a single sub-strategy: a 2-second time limit.  The TimeLimit strategy has a simple implementation:
+### Learning with a MetaLearner
 
 ```julia
-"Stop iterating after a pre-determined amount of time."
-type TimeLimit <: LearningStrategy
-    secs::Float64
-    secs_end::Float64
-    TimeLimit(secs::Number) = new(secs)
-end
-pre_hook(strat::TimeLimit, model) = (strat.secs_end = time() + strat.secs)
-function finished(strat::TimeLimit, model, i)
-    stop = time() >= strat.secs_end
-    if stop
-        info("Time's up!")
-    end
-    stop
-end
+julia> using LearningStrategies
+
+julia> s = strategy(Verbose(MaxIter(5)), TimeLimit(10))
+MetaStrategy
+  > Verbose MaxIter(5)
+  > TimeLimit(10.0)
+
+julia> learn!(nothing, s, 1:100)
+INFO: MaxIter(5) finished
 ```
 
-This strategy has two fields: `secs` is used to initialize `secs_end` during the `pre_hook` callback, and `secs_end` is subsequently used to return true from `finished` when the time limit has been exceeded.
 
-Additional built-in strategies can be found in [the code](https://github.com/JuliaML/LearningStrategies.jl/tree/master/src/strategies.jl).  More complex examples can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
+# Acknowledgements
+LearningStrategies is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
+
+Complex LearningStrategy examples can be found in [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) and from Tom Breloff's [blog posts](http://www.breloff.com/JuliaML-and-Plots/).
 
 ## Primary author: [Tom Breloff](https://github.com/tbreloff)
