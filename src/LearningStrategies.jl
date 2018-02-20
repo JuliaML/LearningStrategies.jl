@@ -107,19 +107,6 @@ function learn!(model, s::LearningStrategy, data)
     model
 end
 
-#-----------------------------------------------------------------------# Offline
-"""
-    Offline(data)
-
-Send all of `data` into the loop of `learn!(model, strategy, data)` at each iteration.
-"""
-struct Offline{T}
-    data::T
-end
-Offline(args...) = Offline(args)
-Base.start(o::Offline) = 1
-Base.done(o::Offline, i) = false
-Base.next(o::Offline, i) = (o.data, i + 1)
 
 #-----------------------------------------------------------------------# InfiniteNothing
 # learn without input data... good for minimizing functions

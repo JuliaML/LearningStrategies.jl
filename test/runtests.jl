@@ -84,6 +84,8 @@ end
 struct LinRegSolver <: LearningStrategy end
 update!(m::LinRegModel, s::LinRegSolver, item) = (m.β[:] = item[1] \ item[2])
 
+import Base.Iterators: repeated
+
 @testset "LinRegModel" begin
     n, p = 1000, 50
     x = randn(n, p)
@@ -91,7 +93,7 @@ update!(m::LinRegModel, s::LinRegSolver, item) = (m.β[:] = item[1] \ item[2])
 
     model = LinRegModel(zeros(p))
     s = strategy(MaxIter(1), LinRegSolver())
-    data = Offline(x, y)
+    data = repeated((x, y))
     learn!(model, s, data)
     @test model.β == x \ y
 end
