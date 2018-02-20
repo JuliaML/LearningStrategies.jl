@@ -85,6 +85,7 @@ INFO: MaxIter(5) finished
 ```julia
 using LearningStrategies
 import LearningStrategies: update!, finished
+import Base.Iterators: repeated
 
 struct MyLinearModel
     coef
@@ -106,7 +107,7 @@ data = (x, y)
 model = MyLinearModel(zeros(5))
 
 # learn! the model with data (x, y)
-learn!(model, MyLinearModelSolver(), Offline(data))
+learn!(model, MyLinearModelSolver(), repeated(data))
 
 # check that it works
 model.coef == x \ y
