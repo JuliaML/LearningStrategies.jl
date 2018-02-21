@@ -35,7 +35,7 @@ end
 ```
 
 - For a `MetaStrategy`, each function (`setup!`, `update!`, `hook`, `finished`, `cleanup!`) is mapped to the contained strategies.
-- To let `item == data`, pass the argument `Offline(data)`.
+- To let `item == data`, pass the argument `Iterators.repeated(data)`.
 
 ## Built In Strategies
 
