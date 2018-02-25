@@ -3,7 +3,7 @@
 |--------------|---------------|------------|
 | [![Build Status](https://travis-ci.org/JuliaML/LearningStrategies.jl.svg?branch=master)](https://travis-ci.org/JuliaML/LearningStrategies.jl) [![Build status](https://ci.appveyor.com/api/projects/status/ev39pu54fh4x2utl?svg=true)](https://ci.appveyor.com/project/joshday/learningstrategies-jl) | [![codecov](https://codecov.io/gh/JuliaML/LearningStrategies.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaML/LearningStrategies.jl) | [![Gitter chat](https://badges.gitter.im/JuliaML/chat.svg)](https://gitter.im/JuliaML/chat) |
 
-**LearningStrategies is a modular framework for building iterative algorithms in Julia**.  
+**LearningStrategies is a modular framework for building iterative algorithms in Julia**.
 
 ## Basics
 
@@ -17,20 +17,21 @@ while not finished:
 cleanup
 ```
 
-
-
 ## MetaStrategy
-The core function of LearningStrategies is a straightforward abstract implementation of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of strategies in a `MetaStrategy`.  
+The core function of LearningStrategies is a straightforward abstract implementation
+of the above loop.  A `model` can be learned by an `LearningStrategy` or a collection of
+strategies in a `MetaStrategy`.
 
 ```julia
 function learn!(model, strat::LearningStrategy, data)
-    setup!(strat, model)
+    setup!(strat, model[, data])
     for (i, item) in enumerate(data)
         update!(model, strat, item)
-        hook(strat, model, i)
-        finished(strat, model, i) && break
+        hook(strat, model[, data], i)
+        finished(strat, model[, data], i) && break
     end
     cleanup!(strat, model)
+    model
 end
 ```
 
