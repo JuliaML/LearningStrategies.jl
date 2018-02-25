@@ -26,7 +26,7 @@ strategies in a `MetaStrategy`.
 function learn!(model, strat::LearningStrategy, data)
     setup!(strat, model[, data])
     for (i, item) in enumerate(data)
-        update!(model, strat, item)
+        update!(model, strat[, i], item)
         hook(strat, model[, data], i)
         finished(strat, model[, data], i) && break
     end
@@ -78,6 +78,11 @@ MetaStrategy
   > TimeLimit(10.0)
 
 julia> learn!(nothing, s, 1:100)
+INFO: MaxIter: 1/5
+INFO: MaxIter: 2/5
+INFO: MaxIter: 3/5
+INFO: MaxIter: 4/5
+INFO: MaxIter: 5/5
 INFO: MaxIter(5) finished
 ```
 

@@ -91,7 +91,7 @@ New models/strategies/data types should overload at least one of the following:
     function learn!(model, s::LearningStrategy, data)
         setup!(s, model[, data])
         for (i, item) in enumerate(data)
-            update!(model, s, item)
+            update!(model, s[, i], item)
             hook(s, model[, data], i)
             finished(s, model[, data], i) && break
         end
@@ -168,6 +168,18 @@ cleanup!(v::Verbose, model) = cleanup!(v.strategy, model)
     MaxIter(n)
 
 Stop learning after `n` iterations.
+
+Wrapping `MaxIter` with [`Verbose`](@ref):
+
+```jldoctest
+julia> learn!(nothing, Verbose(MaxIter(5)), 1:100)
+INFO: MaxIter: 1/5
+INFO: MaxIter: 2/5
+INFO: MaxIter: 3/5
+INFO: MaxIter: 4/5
+INFO: MaxIter: 5/5
+INFO: MaxIter(5) finished
+```
 """
 struct MaxIter <: LearningStrategy
     n::Int
