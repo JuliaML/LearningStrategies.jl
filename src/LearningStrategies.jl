@@ -27,6 +27,7 @@ setup!(s::LearningStrategy, model, data) = setup!(s, model)
 
 update!(model, s::LearningStrategy) = nothing
 update!(model, s::LearningStrategy, item) = update!(model, s)
+update!(model, s::LearningStrategy, i, item) = update!(model, s, item)
 
 hook(s::LearningStrategy, model, i) = nothing
 hook(s::LearningStrategy, model, data, i) = hook(s, model, i)
@@ -57,7 +58,7 @@ function Base.show(io::IO, s::MetaStrategy)
 end
 
 setup!(ms::MetaStrategy, model, data) = foreach(s -> setup!(s, model, data), ms.strategies)
-update!(model, s::MetaStrategy, item) = foreach(x -> update!(model, x, item), s.strategies)
+update!(model, s::MetaStrategy, i, item) = foreach(x -> update!(model, x, i, item), s.strategies)
 hook(s::MetaStrategy, model, data, i) = foreach(x -> hook(x, model, data, i), s.strategies)
 finished(s::MetaStrategy, model, data, i) = any(x -> finished(x, model, data, i), s.strategies)
 cleanup!(s::MetaStrategy, model) = foreach(x -> cleanup!(x, model), s.strategies)
@@ -99,7 +100,7 @@ Learn a `model` from `data` using `strategy`.  New models/strategies/data types 
 function learn!(model, s::LearningStrategy, data)
     setup!(s, model, data)
     for (i, item) in enumerate(data)
-        update!(model, s, item)
+        update!(model, s, i, item)
         hook(s, model, data, i)
         finished(s, model, data, i) && break
     end
@@ -140,7 +141,7 @@ Base.show(io::IO, v::Verbose) = print(io, "Verbose ", v.strategy)
 
 setup!(v::Verbose, model, data) = setup!(v.strategy, model, data)
 
-update!(model, v::Verbose, item) = update!(model, v.strategy, item)
+update!(model, v::Verbose, i, item) = update!(model, v.strategy, i, item)
 
 hook(v::Verbose, model, data, i) = hook(v.strategy, model, data, i)
 
@@ -171,7 +172,15 @@ struct MaxIter <: LearningStrategy
     n::Int
 end
 MaxIter() = MaxIter(100)
+
 Base.show(io::IO, s::MaxIter) = print(io, "MaxIter($(s.n))")
+
+function update!(model, v::Verbose{MaxIter}, i, item)
+  n = v.strategy.n
+  l = length(string(n))
+  info("MaxIter: $(lpad(i, l, 0))/$n")
+end
+
 finished(s::MaxIter, model, data, i) = i >= s.n
 
 #-----------------------------------------------------------------------# TimeLimit

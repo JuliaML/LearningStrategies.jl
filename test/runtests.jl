@@ -1,5 +1,7 @@
 module LearningStrategiesTest
 
+import Base.Iterators: repeated
+
 using LearningStrategies, Base.Test
 import LearningStrategies: update!
 
@@ -73,18 +75,12 @@ end
     @test m.n == 10
 end
 
-
-
-
-
 #-------------------------------------------------------------------# Linear Regression Example
 struct LinRegModel
     β::Vector
 end
 struct LinRegSolver <: LearningStrategy end
 update!(m::LinRegModel, s::LinRegSolver, item) = (m.β[:] = item[1] \ item[2])
-
-import Base.Iterators: repeated
 
 @testset "LinRegModel" begin
     n, p = 1000, 50
@@ -97,4 +93,25 @@ import Base.Iterators: repeated
     learn!(model, s, data)
     @test model.β == x \ y
 end
+
+#-------------------------------------------------------------------# Test Counter
+
+mutable struct Counter <: LearningStrategy
+    n::Int
+    Counter() = new(0)
 end
+
+function update!(m, s::Counter, i, item)
+    s.n += 1
+    @test s.n == i
+end
+
+@testset "update!(m, s, i, item)" begin
+  s = strategy(Verbose(MaxIter(5)), Counter())
+    learn!(nothing, s)
+
+    learn!(nothing, Counter(), repeated(42, 5))
+end
+
+
+end  # module LearningStrategiesTest
