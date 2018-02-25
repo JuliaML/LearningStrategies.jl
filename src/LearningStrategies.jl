@@ -74,9 +74,10 @@ strategy(ms::MetaStrategy, s::LearningStrategy...) = MetaStrategy(ms.strategies.
 
 #-----------------------------------------------------------------------# learn!
 """
-    learn!(model, strategy, data)
+    learn!(model, strategy, data) -> model
 
-Learn a `model` from `data` using `strategy`.  New models/strategies/data types should overload at least one of the following:
+Learn a `model` from `data` using `strategy`.
+New models/strategies/data types should overload at least one of the following:
 
 - [`setup!`](@ref)
 - [`update!`](@ref)
@@ -87,11 +88,11 @@ Learn a `model` from `data` using `strategy`.  New models/strategies/data types 
 # `learn!` Implementation:
 
     function learn!(model, s::LearningStrategy, data)
-        setup!(s, model, data)
+        setup!(s, model[, data])
         for (i, item) in enumerate(data)
             update!(model, s, item)
-            hook(s, model, data, i)
-            finished(s, model, data, i) && break
+            hook(s, model[, data], i)
+            finished(s, model[, data], i) && break
         end
         cleanup!(s, model)
     end
