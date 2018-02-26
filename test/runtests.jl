@@ -72,7 +72,12 @@ end
 @testset "Tracer" begin
     t = Tracer(Int, (mod,i) -> i)
     learn!(nothing, strategy(MaxIter(100), t))
-    @test collect(t.storage) == collect(1:100)
+    @test collect(t) == collect(1:100)
+
+    # collect will copy
+    A = collect(t)
+    A[1] = 42
+    @test collect(t) == collect(1:100)
 end
 
 @testset "Breaker" begin

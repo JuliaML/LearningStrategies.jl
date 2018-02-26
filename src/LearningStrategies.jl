@@ -301,6 +301,7 @@ end
 Store `f(model, i)` every `b` iterations.
 
 To extract the data `Tracer` collected, `collect(tracer)`.
+Note that this operation will copy.
 
 ```jldoctest
 julia> t = Tracer(Int, (model, i) -> @show(i))
@@ -335,7 +336,7 @@ function hook(strat::Tracer, model, i)
     return
 end
 
-Base.collect(t::Tracer) = t.storage
+Base.collect(t::Tracer) = collect(t.storage)
 
 #-----------------------------------------------------------------------# Breaker
 """
