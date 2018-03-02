@@ -49,6 +49,7 @@ A collection of learning strategies in a type-stable way.
 struct MetaStrategy{T <: Tuple} <: LearningStrategy
     strategies::T
 end
+
 MetaStrategy(s::LearningStrategy...) = MetaStrategy(s)
 
 function Base.show(io::IO, s::MetaStrategy)
@@ -118,8 +119,6 @@ Base.done(itr::InfiniteNothing, i) = false
 Base.next(itr::InfiniteNothing, i) = (nothing, i + 1)
 
 learn!(model, s::LearningStrategy) = learn!(model, s, InfiniteNothing())
-
-
 
 
 ################################################################################## Strategies
@@ -300,20 +299,44 @@ end
     Tracer{T}(::Type{T}, f, b=1)
 
 Store `f(model, i)` every `b` iterations.
+
+To extract the data `Tracer` collected, `collect(tracer)`.
+Note that this operation will copy.
+
+```jldoctest
+julia> t = Tracer(Int, (model, i) -> @show(i))
+Tracer(1, #5, 0-element Array{Int64,1})
+
+julia> learn!(nothing, strategy(MaxIter(3), t))
+i = 1
+i = 2
+i = 3
+
+julia> collect(t)
+3-element Array{Int64,1}:
+ 1
+ 2
+ 3
+```
 """
 struct Tracer{S} <: LearningStrategy
     every::Int
     f::Function
     storage::Vector{S}
 end
+
 Tracer{S}(::Type{S}, f::Function, every::Int = 1) = Tracer(every, f, S[])
+
 Base.show(io::IO, s::Tracer) = print(io, "Tracer($(s.every), $(s.f), $(summary(s.storage)))")
+
 function hook(strat::Tracer, model, i)
     if mod1(i, strat.every) == strat.every
         push!(strat.storage, strat.f(model, i))
     end
     return
 end
+
+Base.collect(t::Tracer) = collect(t.storage)
 
 #-----------------------------------------------------------------------# Breaker
 """
@@ -326,12 +349,6 @@ struct Breaker{F<:Function} <: LearningStrategy
 end
 Base.show(io::IO, s::Breaker) = print(io, "Breaker($(s.f))")
 finished(strat::Breaker, model, data, i)::Bool = strat.f(model, i)
-
-
-
-
-
-
 
 
 end # module

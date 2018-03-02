@@ -46,29 +46,40 @@ end
         @test m.n == j
     end
 end
+
 @testset "TimeLimit" begin
     t1 = time()
     learn!(nothing, TimeLimit(.5))
     elapsed = time() - t1
     @test .5 <= elapsed < 1
 end
+
 @testset "Converged" begin
     learn!(nothing, Converged(x -> 1))
 end
+
 @testset "ConvergedTo" begin
     model = ones(5)
     s = strategy(ConvergedTo(m -> m, ones(5)))
     @inferred learn!(model, s)
 end
+
 @testset "IterFunction" begin
     s = IterFunction(1, (m,i) -> println("Print twice:  > $i"))
     learn!(nothing, strategy(s, MaxIter(2)))
 end
+
 @testset "Tracer" begin
     t = Tracer(Int, (mod,i) -> i)
     learn!(nothing, strategy(MaxIter(100), t))
-    @test t.storage == collect(1:100)
+    @test collect(t) == collect(1:100)
+
+    # collect will copy
+    A = collect(t)
+    A[1] = 42
+    @test collect(t) == collect(1:100)
 end
+
 @testset "Breaker" begin
     m = Model(0)
     learn!(m, strategy(NewStrat(), Breaker((m,i) -> m.n==10)))
