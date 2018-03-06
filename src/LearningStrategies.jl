@@ -73,6 +73,8 @@ Create a MetaStrategy from LearningStrategies or add a LearningStrategy to an ex
 strategy(s::LearningStrategy...) = MetaStrategy(s)
 strategy(ms::MetaStrategy, s::LearningStrategy...) = MetaStrategy(ms.strategies..., s...)
 
+Base.getindex(ms::MetaStrategy, i) = ms.strategies[i]
+
 
 #-----------------------------------------------------------------------# learn!
 """
