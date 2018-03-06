@@ -119,6 +119,12 @@ learn!(model, MyLinearModelSolver(), repeated(data))
 model.coef == x \ y
 ```
 
+### More Examples
+
+There are some user contributed snippets in the `examples` dir.
+
+- `dftracer.jl` shows a tracer with DataFrame as underlying storage.
+
 
 # Acknowledgements
 LearningStrategies is partially inspired by [IterationManagers](https://github.com/sglyon/IterationManagers.jl) and (Tom Breloff's) conversations with [Spencer Lyon](https://github.com/sglyon).  This functionality was previously part of the [StochasticOptimization](https://github.com/JuliaML/StochasticOptimization.jl) package, but was split off as a dependency.
