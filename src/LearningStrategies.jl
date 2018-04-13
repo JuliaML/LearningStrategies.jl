@@ -216,7 +216,7 @@ finished(strat::TimeLimit, model, data, i) = time() >= strat.secs_end
 """
     Converged(f; tol = 1e-6, every = 1)
 
-Stop learning when `norm(f(model) - lastf) ≦ tol`.
+Stop learning when `norm(f(model) - lastf) ≦ tol`.  `f` must return a `Vector{Float64}`.
 """
 mutable struct Converged{F <: Function} <: LearningStrategy
     f::F          # f(model)
