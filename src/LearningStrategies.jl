@@ -327,7 +327,7 @@ struct Tracer{S} <: LearningStrategy
     storage::Vector{S}
 end
 
-Tracer{S}(::Type{S}, f::Function, every::Int = 1) = Tracer(every, f, S[])
+Tracer(::Type{S}, f::Function, every::Int = 1) where {S} = Tracer(every, f, S[])
 
 Base.show(io::IO, s::Tracer) = print(io, "Tracer($(s.every), $(s.f), $(summary(s.storage)))")
 
