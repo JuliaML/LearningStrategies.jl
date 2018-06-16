@@ -5,6 +5,8 @@
 
 **LearningStrategies is a modular framework for building iterative algorithms in Julia**.
 
+Below, some of the key concepts are briefly explained, and a few examples are made. A more in-depth notebook can be found [here](http://nbviewer.jupyter.org/github/dominusmi/warwick-rsg/blob/master/Educational/LearningStrategies.ipynb)
+
 ## Basics
 
 Many algorithms can be generalized to the following pseudocode:
