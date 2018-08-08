@@ -107,7 +107,7 @@ finished(s::MyLinearModelSolver, model) = true
 
 # generate some fake data
 x = randn(100, 5)
-y = x * linspace(-1, 1, 5) + randn(100)
+y = x * range(-1, stop=1, length=5) + randn(100)
 
 data = (x, y)
 
