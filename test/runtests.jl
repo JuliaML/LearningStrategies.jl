@@ -2,7 +2,7 @@ module LearningStrategiesTest
 
 import Base.Iterators: repeated
 
-using LearningStrategies, Base.Test
+using LearningStrategies, Statistics, Test
 import LearningStrategies: update!
 
 mutable struct Model n::Int end
@@ -10,32 +10,34 @@ struct NewStrat <: LearningStrategy end
 update!(m::Model, s::NewStrat, item) = (m.n += 1)
 
 #-----------------------------------------------------------------------# Verbose
-info("Verbose")
+@info("Verbose")
 learn!(nothing, Verbose(MaxIter(5)), 1:10)
 learn!(nothing, Verbose(TimeLimit(.5)))
 learn!(Model(5), Verbose(Converged(m -> m.n == 5)))
 
 #-----------------------------------------------------------------------# Type stability
-info("Type Stability and Printing")
-strat_list = [
-    MaxIter(20),
-    TimeLimit(2),
-    Converged(m -> m),
-    ConvergedTo(m -> m, ones(2)),
-    IterFunction((m, i) -> i),
-    Breaker((m, i) -> true),
-    Tracer(Float64, (m, i) -> mean(m))
-]
-println(strategy(strat_list...))
-m = ones(2)
-i = 5
-for s in strat_list
-    println("  > ", s)
-    @inferred setup!(s, m, nothing)
-    @inferred cleanup!(s, m)
-    @inferred hook(s, m, i)
-    @inferred finished(s, m, nothing, i)
-    @inferred update!(m, s, i)
+@info("Type Stability and Printing")
+@testset "Type Stability and Printing" begin
+    strat_list = [
+        MaxIter(20),
+        TimeLimit(2),
+        Converged(m -> m),
+        ConvergedTo(m -> m, ones(2)),
+        IterFunction((m, i) -> i),
+        Breaker((m, i) -> true),
+        Tracer(Float64, (m, i) -> mean(m))
+    ]
+    println(strategy(strat_list...))
+    m = ones(2)
+    i = 5
+    for s in strat_list
+        println("  > ", s)
+        @inferred setup!(s, m, nothing)
+        @inferred cleanup!(s, m)
+        @inferred hook(s, m, i)
+        @inferred finished(s, m, nothing, i)
+        @inferred update!(m, s, i)
+    end
 end
 
 #-----------------------------------------------------------------------# "Real" Tests
@@ -96,7 +98,7 @@ update!(m::LinRegModel, s::LinRegSolver, item) = (m.β[:] = item[1] \ item[2])
 @testset "LinRegModel" begin
     n, p = 1000, 50
     x = randn(n, p)
-    y = x * linspace(-1, 1, p) + randn(n)
+    y = x * range(-1, stop=1, length=p) + randn(n)
 
     model = LinRegModel(zeros(p))
     s = strategy(MaxIter(1), LinRegSolver())

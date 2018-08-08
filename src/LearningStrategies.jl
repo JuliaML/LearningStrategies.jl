@@ -1,7 +1,7 @@
-__precompile__(true)
 module LearningStrategies
 
 import LearnBase: learn!, update!
+using LinearAlgebra
 
 export
     LearningStrategy, MetaStrategy, strategy, Offline, InfiniteNothing,
@@ -53,9 +53,10 @@ end
 MetaStrategy(s::LearningStrategy...) = MetaStrategy(s)
 
 function Base.show(io::IO, s::MetaStrategy)
-    println(io, "MetaStrategy")
-    println.(io, "  > ", s.strategies[1:(end-1)])
-    print(io,    "  > ", s.strategies[end])
+    print(io, "MetaStrategy")
+    for s in s.strategies 
+        print(io, "\n  > ", s)
+    end
 end
 
 setup!(ms::MetaStrategy, model, data) = foreach(s -> setup!(s, model, data), ms.strategies)
@@ -116,10 +117,8 @@ end
 #-----------------------------------------------------------------------# InfiniteNothing
 # learn without input data... good for minimizing functions
 struct InfiniteNothing end
-Base.start(itr::InfiniteNothing) = 1
-Base.done(itr::InfiniteNothing, i) = false
-Base.next(itr::InfiniteNothing, i) = (nothing, i + 1)
-
+Base.iterate(o::InfiniteNothing) = (nothing, 1)
+Base.iterate(o::InfiniteNothing, state) = (state, 1)
 learn!(model, s::LearningStrategy) = learn!(model, s, InfiniteNothing())
 
 
@@ -149,7 +148,7 @@ hook(v::Verbose, model, data, i) = hook(v.strategy, model, data, i)
 
 function finished(v::Verbose, model, data, i)
     done = finished(v.strategy, model, data, i)
-    done && info("$(v.strategy) finished")
+    done && @info("$(v.strategy) finished")
     done
 end
 function finished(v::Verbose{<:MetaStrategy}, model, data, i)
@@ -192,7 +191,7 @@ Base.show(io::IO, s::MaxIter) = print(io, "MaxIter($(s.n))")
 function update!(model, v::Verbose{MaxIter}, i, item)
   n = v.strategy.n
   l = length(string(n))
-  info("MaxIter: $(lpad(i, l, 0))/$n")
+  @info("MaxIter: $(lpad(string(i), l, string(0)))/$n")
 end
 
 finished(s::MaxIter, model, data, i) = i >= s.n
@@ -224,24 +223,27 @@ mutable struct Converged{F <: Function} <: LearningStrategy
     every::Int    # only check every ith iteration
     lastval::Vector{Float64}
 end
-Converged(f::Function; tol::Number = 1e-6, every::Int = 1) = Converged(f, tol, every, zeros(0))
+Converged(f::Function; tol::Number = 1e-6, every::Int = 1) = Converged(f, tol, every, [0.0])
 
 Base.show(io::IO, s::Converged) = print(io, "Converged($(s.f), $(s.tol), $(s.every))")
 
-setup!(s::Converged, model, item) = (s.lastval = zeros(s.f(model)); return)
+function setup!(s::Converged, model, item) 
+    val = s.f(model)
+    s.lastval = val isa Number ? [val] : fill(0.0, length(val))
+end
 
 function finished(s::Converged, model, data, i)
     val = s.f(model)
-    if i > 1 && norm(val - s.lastval) <= s.tol
+    if i > 1 && norm(val .- s.lastval) <= s.tol
         true
     else
-        copy!(s.lastval, val)
+        copyto!(s.lastval, val)
         false
     end
 end
 function finished(v::Verbose{<:Converged}, model, data, i)
     done = finished(v.strategy, model, data, i)
-    done && info("Converged after $i iterations: $(v.strategy.f(model))")
+    done && @info("Converged after $i iterations: $(v.strategy.f(model))")
     done
 end
 
@@ -264,7 +266,7 @@ Base.show(io::IO, s::ConvergedTo) = print(io, "ConvergedTo($(s.f), $(s.tol), $(s
 function finished(strat::ConvergedTo, model, data, i)
     val = strat.f(model)
     if norm(val - strat.goal) <= strat.tol
-        info("Converged after $i iterations: $val")
+        @info("Converged after $i iterations: $val")
         true
     else
         false
