@@ -29,7 +29,8 @@ update!(model, s::LearningStrategy) = nothing
 update!(model, s::LearningStrategy, item) = update!(model, s)
 update!(model, s::LearningStrategy, i, item) = update!(model, s, item)
 
-hook(s::LearningStrategy, model, i) = nothing
+hook(s::LearningStrategy, model) = nothing
+hook(s::LearningStrategy, model, i) = hook(s, model)
 hook(s::LearningStrategy, model, data, i) = hook(s, model, i)
 
 finished(s::LearningStrategy, model) = false
@@ -54,7 +55,7 @@ MetaStrategy(s::LearningStrategy...) = MetaStrategy(s)
 
 function Base.show(io::IO, s::MetaStrategy)
     print(io, "MetaStrategy")
-    for s in s.strategies 
+    for s in s.strategies
         print(io, "\n  > ", s)
     end
 end
@@ -227,7 +228,7 @@ Converged(f::Function; tol::Number = 1e-6, every::Int = 1) = Converged(f, tol, e
 
 Base.show(io::IO, s::Converged) = print(io, "Converged($(s.f), $(s.tol), $(s.every))")
 
-function setup!(s::Converged, model, item) 
+function setup!(s::Converged, model, item)
     val = s.f(model)
     s.lastval = val isa Number ? [val] : fill(0.0, length(val))
 end
