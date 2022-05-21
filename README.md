@@ -1,3 +1,7 @@
+# DEPRECATED
+
+This package is deprecated.
+
 # LearningStrategies
 | Master Build | Test Coverage | Discussion |
 |--------------|---------------|------------|
